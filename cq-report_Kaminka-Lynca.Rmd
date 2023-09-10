@@ -1,0 +1,736 @@
+---
+title: "Do I relly have 24 hours in a day: An analysis of how I spend my time"
+subtitle: "STATS 231: Calendar Query"
+author: "Lynca Jones Kaminka"
+date: "Mar 2th, 2023"
+output:
+  rmarkdown::html_document:
+    theme: cerulean
+    highlight: kate
+---
+```{r setup, include = FALSE, warning = FALSE, echo = FALSE}
+# set code chunk option defaults
+knitr::opts_chunk$set(
+	fig.height = 3,
+	fig.width = 5,
+	message = FALSE,
+	warning = FALSE, 
+	size = "small",
+	tidy = FALSE
+)
+ 
+
+# improve digit and NA display 
+options(scipen = 1, knitr.kable.NA = '')
+
+# load packages
+library(shiny)
+library(shinythemes)
+library(tidyquant)
+library(tidyverse)
+library(tidyr)
+library(ical)
+library(lubridate)
+library(kableExtra)
+library(dplyr) #for inner join, renaming columns
+library(DT)
+library(ggrepel)
+library(tidytuesdayR)
+library(plotly)#hovering
+library(shinythemes)
+library(stringi)
+library(ggthemes)
+library(ggthemes)
+library(gridExtra) ##beautifying the graph ~ rotating the labels.
+library(knitr)
+
+```
+
+
+<!--
+I've left comments throughout this template to help guide you. You can leave my markdown comments for guidance in writing your report since they will not appear in the knitted PDF anyway.
+
+Please rename/remove the headings as you see fit and add any relevant headings, subheadings, etc.
+
+Remember to pay attention to [good coding style practices](https://style.tidyverse.org/) as you work, and be sure to commit changes to GitHub on a regular basis.
+
+Do not duplicate this file. Rename it as appropriate and conduct all your work here, relying on GitHub to track changes/versions for you. There should be only one report file in your repo at all times. You can always refer back to the "fresh" version as needed in the course-content repo.
+
+For grading purposes, please make sure ALL code chunks (except the `setup` code chunk) are visible in your final report. This will be the case by default. If you have code chunks in the end that do not get evaluated for the final report, they should ultimately be deleted.
+-->
+
+
+
+## Introduction <!-- rename/delete as desired -->
+<!--
+Describe the questions of interest: what are they and why are they important or useful to you? (About 3-5 sentences)
+-->
+
+The Calendar Query Project was our first were the focus were data cleaning ,data analysis and suitable visualizations. 
+
+*Questions of interests were:*
+
+1. Does my phone  time usage fluctuates throughout the 14 days depending on when I am the most stressed (which is typically Wednesdays and Fridays) and does it increase during the weekends when I don't have much going on. This is relevant because I believe that I have enough time on my hands to be great at most things I do and one of the things that are holding me back is my inability to manage my time effectively. 
+
+2. How the time I spent doing specific activities like studying for classes, going to office hours, doing my personal work and sleeping has changed in the last 14 days compared to each other. It is relevant because I want to understand where I should invest more time.
+
+3. To what extent (in percentage) am I following the weekly schedule that I have established for myself. It can help me become more aware of ways I can adjust how I spend my time. A little caveat, this question had to be revised because when I was extracting the data set from my time-tracking app, I realized that the time when I start and end the activities I was doing was not imported despite being recorded. Thus, I will only be comparing the expected duration and actual direction of my weekly activities).
+
+## Methods <!-- rename/delete as desired -->
+
+#### **Data collection** 
+<!--
+Briefly describe your data collection process. This does not require the same level of process detail as your proposal. However, there should be enough detail to allow someone to replicate your process. (About 1-2 paragraphs)
+--> 
+
+I used 3 raw data sets from: 
+- My Google calendar: it contains how I am plan to spend my days; it is the same from one week to the other. Since the data corresponds to my weekly routine, I manually entered in those activities.I retrieved the data by importing the Google calendar data set into R. 
+        
+- An app called  StayFree: since this is an app that tracks the daily usage time of every app on my smartphone,I didn't have to actively collect any data except for importing the resulting data set in R. 
+
+- An app called Clockify (I used it as a timer). I activated and deactivated a task on it before and after each activity I intended to analyze. As was the case with the other tree data sets, I retrieved the data by importing the data sets. I was unable to import a single data set since the app calculates the time spent doing an activity in a period of time by combining the time I spent doing that activity during that whole time. it would have lost the day-to-day specificity if I had chosen  to import the data over a long period of time.  
+
+
+#### **Data wrangling** 
+<!--
+Briefly describe how you went from the data as entered to the data in your final form of analysis. You should not describe every line of code in the data wrangling process. Rather, discuss the bigger steps necessary for reproducing your process. For example, everyone will start by calculating the duration of each activity, but what did you need to do from there? Did you sum within each day? Average across the two week period? Calculate proportion of time spent on each activity? Do something else with the data? Did you need to merge data from other sources? Did you have to collapse any categories? This is not an exhaustive list of questions. (About 1 paragraph)
+-->
+
+1. For the first visualization, I imported several data sets (14 to be exact) from Clockify. Since Clockify only allows the users to see the duration of their activities and not the start or  end of each activity entered, I didn't have to infer the start and end time of each activity. The next step was to retrieve the specific information that were relevant to the data visualization  I wanted  (name of the activities, the duration, the day when it happened,..), and I merged all the day specific data sets. After that, the next step was to convert times to numeric values since they were originally expressed as characters. And then, I did some more data set manipulating to get the data set in the form that would get me to the display I wanted to go to. The last step in data wrangling was to keep the activities of interest in the data set 
+
+
+2. For the second visualization, I imported a single data set from StayFree. I also had to go through the process of converting the type the recorded times were in (which were characters) into numeric values. Also, since each time an app is opened, a unique record of the time spent on it is created, I had multiple time records that corresponded to each time an app was used, even on the same day. Thus, I had to find the daily time I spent on each application. I also had to filter out the features related to the time observation that I didn't need. Lastly, since I have several apps, I collapsed some of them into categories that are; social media (for apps like Twitter, Instagram, Whatsapp), Gmail_Youtube (which I use more for informative reason), and the rest of other apps. 
+
+
+3. For the third visualization where I  sought to show the difference between how I spent each of the 14 days on average versus how I originally planned to spend it, I had to use both my Calendar and my time-tracking app. The biggest challenge was bringing those two data sets together since I hadn't preemptively made sure that some features (like names given to observations) were consistent across the two data sets. 
+
+<!--
+Now, WRANGLE!
+
+The code below is provided as a starting point for your data wrangling. You may not need some parts, so delete or modify the code to fit your needs. All of your data wrangling and prep (e.g., creation of any additional datasets necessary for plots or tables) should be in one place. No additional wrangling should be needed in the code chunks where you create your graphs and table(s).
+
+This code should appear in your knitted PDF for your final report. 
+
+See the project instructions for information about how to export your data from Google Calendar.
+
+At a minimum, you will need the following packages (remember to load relevant packages in the `setup` code chunk:
+tidyverse
+
+
+-->
+
+##### 1. Data Wrangling for the first visualization: 
+
+**Step 1.1** Importing the data sets and basic data cleaning steps
+The data cleaning steps include filtering out the dates that aren't in the range of dates I am observing.
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+# Data import form clockify: 
+###############
+Day_1 <- read_csv("Data/Day1.csv")
+Day_2 <- read_csv("Data/Day2.csv")
+Day_3 <- read_csv("Data/Day3.csv")
+Day_4 <- read_csv("Data/Day4.csv")
+Day_5 <- read_csv("Data/Day_5.csv")
+Day_6 <- read_csv("Data/Day_6.csv")
+Day_7 <- read_csv("Data/Day_7.csv")
+Day_8 <- read_csv("Data/Day_8.csv")
+Day_9 <- read_csv("Data/Day_9.csv")
+Day_10 <- read_csv("Data/Day_10.csv")
+Day_11 <- read_csv("Data/Day_11.csv")
+Day_12 <- read_csv("Data/Day_12.csv")
+Day_13 <- read_csv("Data/Day_13.csv")
+Day_14 <- read_csv("Data/Day_14.csv")
+
+
+Day_1_a <- mutate(select(Day_1,Project,  "Time (h)" ), Day = "Day 1")
+
+
+Day_2_a <- mutate(select(Day_2,Project,  "Time (h)" ), Day = "Day 2")
+Day_3_a <- mutate(select(Day_3,Project,  "Time (h)" ), Day = "Day 3")
+Day_4_a <- mutate(select(Day_4,Project,  "Time (h)" ), Day = "Day 4")
+Day_5_a <- mutate(select(Day_5,Project,  "Time (h)" ), Day = "Day 5")
+Day_6_a <- mutate(select(Day_6,Project,  "Time (h)" ), Day = "Day 6")
+Day_7_a<- mutate(select(Day_7,Project,  "Time (h)" ), Day = "Day 7")
+Day_8_a <- mutate(select(Day_8,Project, "Time (h)" ), Day = "Day 8")
+Day_9_a <- mutate(select(Day_9,Project,  "Time (h)" ), Day = "Day 9")
+Day_10_a <- mutate(select(Day_10,Project,  "Time (h)" ), Day = "Day 10")
+Day_11_a <- mutate(select(Day_11,Project,  "Time (h)" ), Day = "Day 11")
+Day_12_a <- mutate(select(Day_12,Project,  "Time (h)" ), Day = "Day 12")
+Day_13_a <- mutate(select(Day_13,Project,  "Time (h)" ), Day = "Day 13")
+Day_14_a <- mutate(select(Day_14,Project,  "Time (h)" ), Day = "Day 14")
+
+
+
+
+All_Days <- bind_rows(Day_1_a, Day_2_a,Day_3_a, Day_4_a,Day_5_a, Day_6_a, Day_7_a, Day_8_a,Day_9_a, Day_10_a,Day_11_a, Day_12_a, Day_13_a, Day_14_a)
+  
+
+ #how to group these by days and projects so that I can avoid having duplicate values inside my data set.
+ 
+
+ All_Days_1 <- All_Days %>%
+   mutate(
+     "Time" = as.numeric(as_datetime(`Time (h)`, "HH:MM:SS"))
+   )
+ 
+
+All_Days_2 <- All_Days_1 %>%
+  filter(Project != "(Without project)")
+
+  
+ All_Days_3 <- All_Days_2 %>%
+   select(c("Project", "Day", "Time")) %>%
+   mutate("Time" = as.integer(`Time`)) %>%
+   group_by(Day, Project) %>%
+   summarise(
+     Total_time = sum(`Time`)
+   )
+
+
+ 
+All_Days_4<- All_Days_3 %>%
+  pivot_wider(names_from = "Project", values_from = "Total_time")
+```
+**Step 1.2**: Handling missing data:
+On some days there are activities that I didn't do, R tends to fill in the empty observation with "N/A", I am changing it the cells that contain the "N/A" tags into a numeric value: 0. 
+```{r, warning = FALSE, message = FALSE, echo = FALSE} 
+ for (i in 1:nrow(All_Days_4)) {
+  for (j in 1:ncol(All_Days_4)) {
+    if (is.na(All_Days_4[i, j])) {
+      All_Days_4[i, j] = 0
+    }
+  }
+}
+```
+
+**Step 1.3** Filtering out the activities that aren't of interest.
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+All_Days_5 <- All_Days_4 %>%
+separate(Day, into = c("Noun", "Day"), sep = " ", convert = TRUE)
+
+All_Days_6 <- arrange(select(All_Days_5, !Noun), Day)
+
+All_Days_7 <- All_Days_6 %>%
+ select(Day, "Bedtime/Sleep", "Work shift", "Office Hours", "Personal work", "Classes", "School work" )
+
+All_Days_7 %>%
+  rename("Sleep Duration" = "Bedtime/Sleep")
+
+All_Days_8 <- All_Days_7 %>%
+    pivot_longer(cols=-Day, names_to="Activities", values_to="Daily_time_Spent")
+
+```
+
+
+
+\newpage 
+
+##### 2.Second Data Wrangling: for the data that was recorded by the Screen Time Recorder App. 
+
+**Step 2.1**: Importing the data set, getting rid of unneccesary features.
+```{r, warning = FALSE, message = FALSE, echo = FALSE} 
+#Data set 2
+StayFree <- read_csv("Data/StayFreeExport.csv")
+
+
+StayFree_2 <- select(mutate( StayFree, app = ...1  ), ! ...1 & !Device) %>%
+    pivot_longer(cols=-app, names_to="Date", values_to="time_char")
+```
+
+**Step 2.2**: Converting the screen time from a character data type to a numeric data type. 
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+StayFree_3 <- StayFree_2 %>%
+  separate(time_char, into=c("time1", "time2", "time3"), sep=" ", remove=FALSE) %>%
+  mutate(
+    hours = case_when(str_detect(time1, "h") ~parse_number(time1)
+                      , TRUE ~ 0),
+    minutes = case_when(str_detect(time1, "m") ~ parse_number(time1)
+                        , str_detect(time2, "m") ~ parse_number(time2)
+                             , TRUE ~ 0)
+         , seconds = case_when(str_detect(time1, "s") ~ parse_number(time1)
+                             , str_detect(time2, "s") ~ parse_number(time2)
+                             , str_detect(time3, "s") ~ parse_number(time3)
+                             , TRUE ~ 0) 
+         , time_seconds = minutes*60 + seconds + hours*360
+         ,  time_minutes = minutes + seconds/60 + hours*60
+         ,  time_hours = hours + minutes/60 + seconds/360)  
+```
+
+**Step 2.3**: More data cleaning. 
+Extracting the observations of interests by a) renaming columns, ordering the days and arranging the data set in such a way that all apps and their associated usage times can be retrieved and manipulated separately.
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+#names(StayFree_3)
+
+StayFree_4 <- StayFree_3 %>%
+  select(app, Date, "time_seconds") %>%
+  filter(!app == "Settings" )%>%
+  pivot_wider(names_from = "Date", values_from = "time_seconds")
+
+
+ names(StayFree_4) <- c ("Apps", "Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Day 7", "Day 8", "Day 9", "Day 10", "Day 11", "Day 12", "Day 13", "Day 14", "Day 15", "TotalUsage")
+
+
+# View(StayFreeModified)
+
+StayFree_5 <- StayFree_4%>%
+  pivot_longer(cols=-Apps, names_to="Days", values_to="Time_T")%>%
+  filter(Days != "TotalUsage")
+
+
+  ##Grouping the amount of length of an app by days and apps.
+  StayFree_6 <- StayFree_5 %>%
+   group_by(Days, Apps) %>%
+   summarise(
+     Total_time = sum(Time_T)
+   )
+ #View(StayFree_7)
+
+
+  StayFree_7 <- StayFree_6 %>%
+  separate(Days, into = c("Noun", "Day"), sep = " ", convert = TRUE)
+
+ StayFree_8<- arrange(select(StayFree_7, !Noun), Day)
+
+```
+ 
+**Step 2.4**: Grouping the observations 
+Since I want to compare the times I spent on different app categories, I will have to first isolate the apps that belong to the same category. The categories are social media apps, Youtube and Gmail and all the other apps. 
+Once each app has been grouped under the right category, I can plot the graph that shows the difference of usage between those three different app categories. 
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+ 
+ ############
+Social_Media_Apps <- StayFree_8 %>%
+   filter(Apps == "Instagram" |
+          Apps == "Twitter" |
+           Apps == "Snapchat"| 
+           Apps == "Zara"|
+           Apps =="Whatsapp" |
+           Apps == "YouTube" |
+           Apps == "Netflix"
+           )
+   Social_Media_Apps_2 <- Social_Media_Apps %>%
+   group_by(Day) %>%
+   summarise(
+     Total_time_2 = sum(Total_time)
+   )
+
+
+#############
+
+OtherApps <- StayFree_8 %>%
+  filter(Apps != "Instagram" &
+          Apps != "Twitter" &
+           Apps != "Snapchat"& 
+           Apps != "Zara"&
+           Apps !="Whatsapp" &
+           Apps != "YouTube" &
+           Apps != "Gmail" &
+           Apps != "Netflix"
+           )
+
+  OtherApps_2 <- OtherApps %>%
+       group_by(Day) %>%
+       summarise(
+       Total_time_2 = sum(Total_time)
+   )
+  
+  ######################
+  Youtube_Gmail <- StayFree_8 %>%
+      filter( Apps == "YouTube" |
+              Apps ==  "Gmail"
+           )
+       Youtube_Gmail_2  <- Youtube_Gmail %>%
+       group_by(Day) %>%
+       summarise(
+       Total_time_2 = sum(Total_time)
+   )
+   
+      #View(OtherApps_2)
+      #View(Social_Media_Apps_2)
+      #View(Youtube_Gmail_2)
+       
+   
+```
+
+**Step 2.5**: Creation of the last dataset which will gather the duration of use of different application categories during the last 14 days
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+  Final_Result <- OtherApps_2 %>%
+    full_join(Social_Media_Apps_2, by="Day")
+  
+  Final_Result_1 <- Final_Result %>%
+    full_join(Youtube_Gmail_2, by="Day")
+  
+   names(Final_Result_1) <- c ("Day", "Other Apps", "Social Media Apps", "Youtube_Gmail")
+
+   Final_Result_1 %>%
+       rename("Youtube&Gmail" = "Youtube_Gmail") 
+
+Final_Result_2 <- Final_Result_1 %>%
+    pivot_longer(cols=-Day, names_to="Type_of_app", values_to="Daily_time_spent")
+#View(Final_Result_2)
+
+```
+
+\newpage 
+
+
+##### 3. Data wrangling for the third data set which was imported from  my google calendar. 
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+# Data import (requires **ical** package)
+cal_import <- ical_parse_df("Data/lkaminka25@amherst.edu.ics") 
+
+# Data wrangling
+mycal <- 
+  cal_import %>% 
+  # Google Calendar event names are in a variable called "summary";
+  # "activity" is a more relevant/informative variable name.
+  rename(activity = summary) %>% 
+  mutate(
+    # Specify time zone (defaults to UTC otherwise)
+    across(c(start, end), 
+           .fns = with_tz, 
+           tzone = "America/New_York"),
+    # Compute duration of each activity in hours
+    duration_hours = interval(start, end) / hours(1),
+    # Examples of getting components of dates/times 
+    # Note: 
+    # i. these could be based on either start datetime or end datetime
+    # ii. you do NOT need all of these!! so only use what you need
+    date = date(start),
+    year = year(start),
+    month_number = month(start),
+    month_label = month(start, 
+                        label = TRUE, 
+                        abbr = FALSE),
+    weekday_number = wday(start),
+    weekday_label = wday(start, 
+                         label = TRUE, 
+                         abbr = FALSE),
+    hour = hour(start),
+    time = hour(start) + minute(start)/60,
+    # Convert text to lowercase and remove repeated or leading/trailing 
+    # spaces to help clean up inconsistent formatting.
+    across(c(activity, description), 
+           .fns = str_to_lower),
+    across(c(activity, description), 
+           .fns = str_squish)
+  ) %>% 
+  # The first Google Calendar entry is always an empty 1969 event
+  filter(year == 2023) 
+
+
+My_Calendar<- mycal %>%
+  select("activity","date", "month_number", "duration_hours", "start", "end", "hour", "time" ) %>%
+  filter(month_number == 2) %>%
+  separate(date, into = c("Year", "Month", "Day"), sep = "-", convert = TRUE) %>%
+  arrange(Day) %>%
+  filter(!Day < 14 & !Day > 20) %>%
+  select("activity", "Day", "duration_hours")
+
+
+My_Calendar_2 <- My_Calendar %>%
+     group_by(Day, activity) %>%
+     summarise(
+     Total_time_hours = sum(`duration_hours`)
+   )
+  
+
+
+#View(My_Calendar_2)
+
+```
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+#duplicating the values of the days since my schedule isn't really day specific. 
+#And then, because on some days there are activities that I didn't do, R tends to fill in the empty observation with "N/A", I am changing it the cells that contain the "N/A" tags into numeric values. 
+
+
+
+My_Calendar_3<- My_Calendar_2 %>%
+  pivot_wider(names_from = Day, values_from = Total_time_hours)
+
+ for (i in 1:nrow(My_Calendar_3)) {
+  for (j in 1:ncol(My_Calendar_3)) {
+    if (is.na(My_Calendar_3[i, j])) {
+      My_Calendar_3[i, j] = 0
+    }
+  }
+}
+
+
+ names(My_Calendar_3) <- c ("Activities", "Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Day 7") 
+ #View(My_Calendar_3)
+ My_Calendar_4 <- My_Calendar_3 
+ names(My_Calendar_4) <- c ("Activities", "Day 8", "Day 9", "Day 10", "Day 11", "Day 12", "Day 13", "Day 14")
+
+ 
+ My_Calendar_5 <- My_Calendar_4 %>%
+ full_join(My_Calendar_3, by="Activities")
+ 
+ #View(My_Calendar_5)
+
+ My_Calendar_6 <- My_Calendar_5%>%
+    pivot_longer(cols=-Activities, names_to="Days", values_to="Daily_time_Spent_h")%>%
+    separate(Days, into = c("Noun", "Day"), sep = " ", convert = TRUE) %>%
+    select(Activities, Day, Daily_time_Spent_h )
+  
+ #View(My_Calendar_6)
+ 
+ My_Calendar_7 <- My_Calendar_6 %>%
+    group_by( Activities) %>%
+    summarise(
+     Average_Daily_Time_Spent_h = mean(`Daily_time_Spent_h`)
+   ) %>%
+   filter(Activities != "fashion show meeting" &
+          Activities ==  "bedtime/sleep" |
+          Activities == "work shift" |
+          Activities == "office hours" |
+          Activities == "personal work"|
+          Activities == "classes" | 
+          Activities == "school work" |
+          Activities == "clubs"  |
+          Activities == "socializing")
+   
+
+   All_Days_7_b <- All_Days_6 %>%
+   select(Day, "Bedtime/Sleep", "Work shift", "Office Hours", "Personal work", "Classes", "School work", "Clubs",  "Socializing")
+   
+  
+   
+   names(All_Days_7_b) <- c ("Day", "bedtime/sleep", "work shift", "office hours", "personal work", "classes", "school work", "clubs",      "socializing")
+   All_Days_8_b <- All_Days_7_b %>%
+      pivot_longer(cols=-Day, names_to="Activities", values_to="Daily_time_Spent")%>%
+      group_by(Activities) %>%
+      summarise(
+      Average_Daily_Time_Spent_s  = mean(Daily_time_Spent)
+     ) 
+   
+  All_Days_9_b <- All_Days_8_b %>%
+    mutate(Average_Daily_Time_Spent_h = Average_Daily_Time_Spent_s/3600)%>%
+    select(Activities, Average_Daily_Time_Spent_h)
+   
+  
+```
+
+**Step 3.3**: bringing the data sets together 
+```{r, warnings = FALSE, message = FALSE, echo = FALSE}
+
+
+Table <- My_Calendar_7 %>%
+  full_join(All_Days_9_b, by = "Activities")
+
+ names(Table) <- c ("Activities", "Duration_Planned", "Actual_Duration")
+ 
+Table_1 <- Table %>%
+  mutate(Consistency = (Actual_Duration/Duration_Planned)*100)
+
+
+Table_1 %>%
+  mutate(across(where(is.numeric), ~ round(., 2)))
+
+```
+
+
+
+
+\newpage
+
+## Visualizations and Tables <!-- rename/delete as desired -->
+
+
+**Visualization 1**: Self-reported time spent on selected activities (represented as a bar chart)
+```{r, fig.align='center',warning = FALSE, message = FALSE, echo = FALSE}
+ggplot(Final_Result_2, aes(fill = Type_of_app, y=(Daily_time_spent)/3600, x=Day)) + 
+    geom_bar(position="stack", color = "grey", stat="identity", width=0.7) +
+    scale_x_continuous(breaks=c(1,2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15), 
+                       labels=c("Tues","Wed","Thurs","Fri","Sat", "Sun", 
+                           "Mon","Tues","Wed","Thurs","Fri","Sat", "Sun", 
+                           "Mon", "Tues")) +
+    scale_y_continuous(breaks=c(1,2, 3, 4, 5, 6)) +
+    labs(x="Days", y="Daily Usage Time(in hours)", 
+         title="\n Amount of time Spent on different apps on my phone"
+        ,subtitle="\n Over a 14 days period"
+        ,fill= "Type of apps")  +
+    theme(panel.background = element_rect(
+         fill = "#FFFEEC", color = "#FFFEEC", size = 2)
+          ) +
+    theme(axis.text.x = element_text(angle = 50, vjust = 0.05, hjust=0.05))+
+    theme(aspect.ratio=18/40)
+```
+
+**Visualization 2**: Self-reported time spent on selected activities (represented as a line graph).
+```{r, fig.align='center',warning = FALSE, message = FALSE, echo = FALSE}
+ggplot(All_Days_8, aes( x=Day, y= Daily_time_Spent/3600, color = Activities)) + 
+    geom_point(aes(shape = Activities))+
+    geom_line() +
+    scale_x_continuous(breaks=c(1,2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14), 
+                       labels=c("Tues","Wed","Thurs","Fri","Sat", "Sun", 
+                           "Mon","Tues","Wed","Thurs","Fri","Sat", "Sun", 
+                           "Mon")) + 
+    scale_y_continuous(breaks=c(2,4, 6, 8 ,10, 12, 14, 16), 
+                       ) +
+    labs(x="Days", y="Duration of activity (in hours)", 
+         title="\t \t Duration of some activities of interests"
+        ,subtitle="\t \t \t Over a 14 days period from Feb14 to Feb 28")+
+       
+    theme(panel.background = element_rect(
+         fill = "#FFFEEC", color = "#FFFEEC", size = 2), 
+          ) +
+    theme(axis.text.x = element_text(angle = 50, vjust = 0.05, hjust=0.05))+
+    theme(aspect.ratio=18/40)
+```
+
+
+
+**Visualization 3**:  Table that compares with the amount of the length of some of my activities over the last 14 days, and the amount I planned to spend doing those activities. 
+
+```{r,fig.align='center', warning = FALSE, message = FALSE, echo = FALSE}
+kable(head(Table_1, 8), align = 'c', booktabs = TRUE) %>%
+  row_spec(1,italic = TRUE, color = '#2E3840', background = '#f8f7fc' ) %>% 
+  row_spec(2,italic = TRUE, color = '#2E3840', background = '#eff2f3' ) %>% 
+  row_spec(3,italic = TRUE, color = '#2E3840', background = '#ddeadd' ) %>% 
+  row_spec(4,italic = TRUE, color = '#2E3840', background = '#d0e0e3') %>%
+  row_spec(5,italic = TRUE, color = '#2E3840', background = '#bacdca')  %>%
+  row_spec(6,italic = TRUE, color = '#2E3840', background = '#a7dcd2')  %>%
+  row_spec(7,italic = TRUE, color = '#2E3840', background = '#b7cedf')  %>%
+    row_spec(8,italic = TRUE, color = '#2E3840', background = '#6a8283')  %>%
+  add_header_above(c("Difference between how I plan vs how I actually spend my days" = 4))%>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
+ 
+
+
+```
+
+
+
+<!--
+This is where you talk about the results you found! (About 3-5 paragraphs)
+
+You may organize your results however you see fit. Some may choose to answer each original question in order and refer to whichever visualizations help shed light on each question (this is probably a more natural approach). Others may choose to separately discuss each visualization and table in order and what information each object conveys. 
+
+Each visualization and table should have its own code chunk, and the results should be displayed as close as possible to where it's referenced in your narration. 
+-->
+
+\newpage
+
+## Results
+
+The first visualization shows that I spent almost five hours using various apps on my phone. There doesn't seem to be much difference between weekdays and weekends in general, except for a certain Sunday when I used my phone for almost 7 hours. 
+
+On the second visualization, it is clear that there are dramatic increases and decreases in  duration for the majority of the activities throughout the 14 days period. I truly believe that if I were consistent in how I spend my days, I would avoid sleeping for less than 6 hours on some days. 
+
+The table shows that I don't really follow my schedule to perfection but the difference doesn't seem that huge. There are areas like my involvement in clubs, hanging out with friends, going to office hours that are still works in progress for me. 
+
+# Conclusions <!-- rename/delete as desired -->
+<!--
+With your initial questions in mind, briefly summarize what you learned about how you spent your time. What are the big take-aways for you about how you spend your time? If relevant, how does this affect how you might spend your time going forward? (About 3-5 sentences)
+
+There should not be any code chunks in this section.
+-->
+
+
+Besides the fact that this is a class project, I specifically chose these questions because I know I need to work on my time management so that I don't feel overwhelmed for most weeks; which will definitely improve my quality of life. The biggest insights (and especially the hardest to process) were how much I am on my phone and how I can be consistent from a day to another when it comes to things like going to office hours, spending time with my friends, getting enough sleep. I hope this new awareness will help me plan  and feel more motivated to stick to my schedule.  
+
+
+\newpage
+##  Reflection <!-- do not delete, but feel free to rename -->
+
+Two of the biggest difficulties I encountered in the data collection and analysis process were forgetfulness and the inability to analyze what I  set out to study because the data could not be derived as I wished. I realized that forgetfulness is not something I can overcome all the time, and sometimes bigger priorities can get in the way of collecting accurate data. Second, I ended up not answering my original main questions of interest since when I tried exporting the data from the time-tracking app, I realized that details like when I had started an activity, when I had finished, were not recorded. As a result, my analysis had to be exclusively about the duration of the activities I was doing. 
+
+
+As a result of seeing how self-reporting while analyzing the reports is error prone, for any future projects, I plan on not endeavoring to analyze something that needs to be constantly checked/updated by me. Besides that, I learned a great deal about pre-testing the tools one uses to save the data, as you may not be able to retrieve the specific information you wanted to export. Also, I believe that since most of my questions had as goal analyzing how I spend my days, I don't believe that collecting more data could have been helpful in any way. 
+
+
+To the question of what expectations I have when I give my data, I believe that we are all coerced into giving our data to tech giants. Therefore, I don't think I have a choice of giving my data or any expectations when I do it because I do not choose to do it. However,I definitely wish data was analyzed en masse in order to discover trends in populations instead of using it to build algorithms that can predict what I as user will do next. 
+
+As someone who may  one day analyze other people's data, I believe I will strive to refrain from using data in ways that the person who gave their data did not consent to. Besides, let people who  "give up" their data know that it's happening, and give me them alternatives of using the technologies they are using without giving up their personal data (as opposed to what normally happens where if you don't want Google to track you then you can't use any of its services or affiliated services).
+
+### Materials used:
+
+a. Attempt to beautify ggplot2 was done thanks to:  https://www.cedricscherer.com/2019/08/05/a-ggplot2-tutorial-for-beautiful-plotting-in-r/
+b. Chapter 10 of the textbook (10.2. The kableExtra package) helped me with the layout of the table. 
+
+```{r, warnings=FALSE, message = FALSE, echo = FALSE, eval = FALSE}
+citation("shiny")
+citation("shinythemes")
+citation("tidyquant")
+citation("tidyverse")
+citation("tidyr")
+citation("ical")
+citation("lubridate")
+citation("kableExtra")
+citation("dplyr")
+citation("DT")
+citation("ggrepel")
+citation("tidytuesdayR")
+citation("plotly")
+citation("shinythemes")
+citation("stringi")
+citation("ggthemes")
+citation("gridExtra")
+citation("knitr")
+
+```
+## **References**:
+
+1. Chang W, Cheng J, Allaire J, Sievert C,Schloerke B, Xie Y, Allen J, McPherson J, Dipert A, Borges B (2022). _shiny: WebApplication Framework for R_. R package version 1.7.4, <https://CRAN.R-project.org/package=shiny>.
+  
+2. Chang W (2021). _shinythemes: Themes for Shiny_. R package version 1.2.0, <https://CRAN.R-project.org/package=shinythemes>.
+  
+  3.Dancho M, Vaughan D (2023). _tidyquant: Tidy Quantitative Financial Analysis_. R package version 1.0.7, <https://CRAN.R-project.org/package=tidyquant>.
+
+4.  Wickham H, Averick M, Bryan J, Chang W, McGowan LD, François R, Grolemund G, Hayes A, Henry L, Hester J, Kuhn M, Pedersen TL, Miller E, Bache SM, Müller K, Ooms J, Robinson D, Seidel DP, Spinu V, Takahashi K, Vaughan D, Wilke C, Woo K, Yutani H (2019). “Welcome to the tidyverse.” _Journal of Open Source Software_, *4*(43), 1686. doi:10.21105/joss.01686 <https://doi.org/10.21105/joss.01686>.
+
+5. Wickham H, Vaughan D, Girlich M (2023). _tidyr: Tidy Messy Data_. R package version 1.3.0, <https://CRAN.R-project.org/package=tidyr>.
+
+6. Meissner P (2019). _ical: 'iCalendar' Parsing_. R package version 0.1.6, <https://CRAN.R-project.org/package=ical>.
+
+  7.Garrett Grolemund, Hadley Wickham (2011). Dates and Times Made Easy with lubridate. Journal of Statistical Software, 40(3), 1-25. URL https://www.jstatsoft.org/v40/i03/.
+
+  8.Zhu H (2021). _kableExtra: Construct Complex Table with 'kable' and Pipe Syntax_. R package version 1.3.4, <https://CRAN.R-project.org/package=kableExtra>.
+
+9. Wickham H, François R, Henry L, Müller K, Vaughan D (2023). _dplyr: A Grammar of Data Manipulation_. R package version 1.1.2, <https://CRAN.R-project.org/package=dplyr>.
+
+10. Xie Y, Cheng J, Tan X (2023). _DT: A Wrapper of the JavaScript Library 'DataTables'_. R package version 0.27, <https://CRAN.R-project.org/package=DT>.
+
+  11.Slowikowski K (2023). _ggrepel: Automatically Position Non-Overlapping Text Labels with 'ggplot2'_. R package  version 0.9.3, <https://CRAN.R-project.org/package=ggrepel>.
+  
+  12.Hughes E (2022). _tidytuesdayR: Access the Weekly 'TidyTuesday' Project Dataset_. R package version 1.0.2, <https://CRAN.R-project.org/package=tidytuesdayR>.
+
+13. C. Sievert. Interactive Web-Based Data Visualization with R, plotly, and shiny. Chapman and Hall/CRC Florida, 2020.
+
+  14.Chang W (2021). _shinythemes: Themes for Shiny_. R package version 1.2.0, <https://CRAN.R-project.org/package=shinythemes>.
+
+15. Gagolewski M (2022). “stringi: Fast and portable character string processing in R.” _Journal of Statistical Software_, *103*(2), 1-59. doi:10.18637/jss.v103.i02 <https://doi.org/10.18637/jss.v103.i02>.
+
+  16.Arnold J (2021). _ggthemes: Extra Themes, Scales and Geoms for 'ggplot2'_. R package version 4.2.4, <https://CRAN.R-project.org/package=ggthemes>.
+
+  17.Auguie B (2017). _gridExtra: Miscellaneous Functions for "Grid" Graphics_. R package version 2.3,
+ <https://CRAN.R-project.org/package=gridExtra>.
+  
+18.Yihui Xie (2023). knitr: A General-Purpose Package for Dynamic Report Generation in R. R package version 1.42.
+
+
+
+<!--
+Write a reflection here in paragraph form (i.e., not bullet-pointed or numbered). (About 2-4 paragraphs) 
+
+In particular, address:
+* What difficulties in the data collection and analysis process did you encounter? Identify two of your
+main hurdles in gathering accurate data.
+
+* What implications does that have for future data collection and/or analysis projects?
+
+* How much data do you think you’d need to collect in order to answer your question(s) of interest?
+Would it be hard to collect that data? Why or why not?
+
+* As someone who provides data, what expectations do you have when you give your data (e.g. to
+Facebook, Google, MapMyRun, etc.)?
+
+* As someone who analyzes others’ data, what ethical responsibilities do you have?
+-->
+
